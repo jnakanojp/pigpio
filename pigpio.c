@@ -316,7 +316,10 @@ bit 0 READ_LAST_NOT_SET_ERROR
 #define PCM_BASE   (pi_peri_phys + 0x00203000)
 #define PWM_BASE   (pi_peri_phys + 0x0020C000)
 #define SPI_BASE   (pi_peri_phys + 0x00204000)
+// #define SPI_BASE   (pi_peri_phys + 0x00204600)
 #define SYST_BASE  (pi_peri_phys + 0x00003000)
+
+#define SPI_OFFSET 0x600
 
 #define AUX_LEN   0xD8
 #define BSCS_LEN  0x40
@@ -580,13 +583,13 @@ bit 0 READ_LAST_NOT_SET_ERROR
 #define SPI_CS1     1
 #define SPI_CS2     2
 
-/* standard SPI gpios (ALT0) */
+/* standard SPI gpios (ALT3) */
 
-#define PI_SPI_CE0   8
-#define PI_SPI_CE1   7
-#define PI_SPI_SCLK 11
-#define PI_SPI_MISO  9
-#define PI_SPI_MOSI 10
+#define PI_SPI_CE0   0
+// #define PI_SPI_CE1   7
+#define PI_SPI_SCLK  3
+#define PI_SPI_MISO  1
+#define PI_SPI_MOSI  2
 
 /* auxiliary SPI gpios (ALT4) */
 
@@ -4525,9 +4528,9 @@ static void spiGoS(
                  SPI_CS_CSPOL(cspol)   |
                  SPI_CS_CLEAR(3);
 
-   spiReg[SPI_DLEN] = 2; /* undocumented, stops inter-byte gap */
+   spiReg[SPI_OFFSET + SPI_DLEN] = 2; /* undocumented, stops inter-byte gap */
 
-   spiReg[SPI_CS] = spiDefaults; /* stop */
+   spiReg[SPI_OFFSET + SPI_CS] = spiDefaults; /* stop */
 
    if (!count) return;
 
@@ -4550,57 +4553,57 @@ static void spiGoS(
       cnt3w = 0;
    }
 
-   spiReg[SPI_CLK] = 250000000/speed;
+   spiReg[SPI_OFFSET +SPI_CLK] = 250000000/speed;
 
-   spiReg[SPI_CS] = spiDefaults | SPI_CS_TA; /* start */
+   spiReg[SPI_OFFSET +SPI_CS] = spiDefaults | SPI_CS_TA; /* start */
 
    cnt = cnt4w;
 
    while((txCnt < cnt) || (rxCnt < cnt))
    {
-      while((rxCnt < cnt) && ((spiReg[SPI_CS] & SPI_CS_RXD)))
+      while((rxCnt < cnt) && ((spiReg[SPI_OFFSET +SPI_CS] & SPI_CS_RXD)))
       {
-         if (rxBuf) rxBuf[rxCnt] = spiReg[SPI_FIFO];
-         else       spi_dummy    = spiReg[SPI_FIFO];
+         if (rxBuf) rxBuf[rxCnt] = spiReg[SPI_OFFSET +SPI_FIFO];
+         else       spi_dummy    = spiReg[SPI_OFFSET +SPI_FIFO];
          rxCnt++;
       }
 
-      while((txCnt < cnt) && ((spiReg[SPI_CS] & SPI_CS_TXD)))
+      while((txCnt < cnt) && ((spiReg[SPI_OFFSET +SPI_CS] & SPI_CS_TXD)))
       {
-         if (txBuf) spiReg[SPI_FIFO] = txBuf[txCnt];
-         else       spiReg[SPI_FIFO] = 0;
+         if (txBuf) spiReg[SPI_OFFSET +SPI_FIFO] = txBuf[txCnt];
+         else       spiReg[SPI_OFFSET +SPI_FIFO] = 0;
          txCnt++;
       }
    }
 
-   while (!(spiReg[SPI_CS] & SPI_CS_DONE)) ;
+   while (!(spiReg[SPI_OFFSET +SPI_CS] & SPI_CS_DONE)) ;
 
    /* now switch to 3-wire bus */
 
    cnt += cnt3w;
 
-   spiReg[SPI_CS] |= SPI_CS_REN;
+   spiReg[SPI_OFFSET +SPI_CS] |= SPI_CS_REN;
 
    while((txCnt < cnt) || (rxCnt < cnt))
    {
-      while((rxCnt < cnt) && ((spiReg[SPI_CS] & SPI_CS_RXD)))
+      while((rxCnt < cnt) && ((spiReg[SPI_OFFSET +SPI_CS] & SPI_CS_RXD)))
       {
-         if (rxBuf) rxBuf[rxCnt] = spiReg[SPI_FIFO];
-         else       spi_dummy    = spiReg[SPI_FIFO];
+         if (rxBuf) rxBuf[rxCnt] = spiReg[SPI_OFFSET +SPI_FIFO];
+         else       spi_dummy    = spiReg[SPI_OFFSET +SPI_FIFO];
          rxCnt++;
       }
 
-      while((txCnt < cnt) && ((spiReg[SPI_CS] & SPI_CS_TXD)))
+      while((txCnt < cnt) && ((spiReg[SPI_OFFSET +SPI_CS] & SPI_CS_TXD)))
       {
-         if (txBuf) spiReg[SPI_FIFO] = txBuf[txCnt];
-         else       spiReg[SPI_FIFO] = 0;
+         if (txBuf) spiReg[SPI_OFFSET +SPI_FIFO] = txBuf[txCnt];
+         else       spiReg[SPI_OFFSET +SPI_FIFO] = 0;
          txCnt++;
       }
    }
 
-   while (!(spiReg[SPI_CS] & SPI_CS_DONE)) ;
+   while (!(spiReg[SPI_OFFSET +SPI_CS] & SPI_CS_DONE)) ;
 
-   spiReg[SPI_CS] = spiDefaults; /* stop */
+   spiReg[SPI_OFFSET +SPI_CS] = spiDefaults; /* stop */
 }
 
 static void spiGo(
@@ -4698,22 +4701,23 @@ static void spiInit(uint32_t flags)
       /* save original state */
 
       old_mode_ce0  = gpioGetMode(PI_SPI_CE0);
-      old_mode_ce1  = gpioGetMode(PI_SPI_CE1);
+      // old_mode_ce1  = gpioGetMode(PI_SPI_CE1);
       old_mode_sclk = gpioGetMode(PI_SPI_SCLK);
       old_mode_miso = gpioGetMode(PI_SPI_MISO);
       old_mode_mosi = gpioGetMode(PI_SPI_MOSI);
 
-      old_spi_cs  = spiReg[SPI_CS];
-      old_spi_clk = spiReg[SPI_CLK];
+      old_spi_cs  = spiReg[SPI_OFFSET +SPI_CS];
+      old_spi_clk = spiReg[SPI_OFFSET +SPI_CLK];
 
       /* set gpios to SPI mode */
 
-      if (!(resvd&1)) myGpioSetMode(PI_SPI_CE0,  PI_ALT0);
-      if (!(resvd&2)) myGpioSetMode(PI_SPI_CE1,  PI_ALT0);
+      if (!(resvd&1)) myGpioSetMode(PI_SPI_CE0,  PI_ALT3);
+      // if (!(resvd&2)) myGpioSetMode(PI_SPI_CE1,  PI_ALT3);
 
-      myGpioSetMode(PI_SPI_SCLK, PI_ALT0);
-      myGpioSetMode(PI_SPI_MISO, PI_ALT0);
-      myGpioSetMode(PI_SPI_MOSI, PI_ALT0);
+      myGpioSetMode(PI_SPI_SCLK, PI_ALT3);
+      myGpioSetMode(PI_SPI_MISO, PI_ALT3);
+      myGpioSetMode(PI_SPI_MOSI, PI_ALT3);
+      printf("ok!\n");
    }
 }
 
@@ -4747,14 +4751,14 @@ static void spiTerm(uint32_t flags)
       /* restore original state */
 
       if (!(resvd&1)) myGpioSetMode(PI_SPI_CE0,  old_mode_ce0);
-      if (!(resvd&2)) myGpioSetMode(PI_SPI_CE1,  old_mode_ce1);
+      // if (!(resvd&2)) myGpioSetMode(PI_SPI_CE1,  old_mode_ce1);
 
       myGpioSetMode(PI_SPI_SCLK, old_mode_sclk);
       myGpioSetMode(PI_SPI_MISO, old_mode_miso);
       myGpioSetMode(PI_SPI_MOSI, old_mode_mosi);
 
-      spiReg[SPI_CS]  = old_spi_cs;
-      spiReg[SPI_CLK] = old_spi_clk;
+      spiReg[SPI_OFFSET +SPI_CS]  = old_spi_cs;
+      spiReg[SPI_OFFSET +SPI_CLK] = old_spi_clk;
    }
 }
 
@@ -7422,7 +7426,7 @@ static int initPeripherals(void)
    if (systReg == MAP_FAILED)
       SOFT_ERROR(PI_INIT_FAILED, "mmap syst failed (%m)");
 
-   spiReg  = initMapMem(fdMem, SPI_BASE,  SPI_LEN);
+   spiReg  = initMapMem(fdMem, SPI_BASE,  SPI_OFFSET + SPI_LEN);
 
    if (spiReg == MAP_FAILED)
       SOFT_ERROR(PI_INIT_FAILED, "mmap spi failed (%m)");
