@@ -4,6 +4,7 @@
 CROSS_PREFIX =
 CC           = $(CROSS_PREFIX)gcc
 AR           = $(CROSS_PREFIX)ar
+ARFLAG       = crsv
 RANLIB       = $(CROSS_PREFIX)ranlib
 SIZE         = $(CROSS_PREFIX)size
 STRIP        = $(CROSS_PREFIX)strip
@@ -17,13 +18,15 @@ CFLAGS	+= -O3 -Wall -pthread
 LIB1     = libpigpio.so
 OBJ1     = pigpio.o command.o
 
+LIB1S    = libpigpio.a
+
 LIB2     = libpigpiod_if.so
 OBJ2     = pigpiod_if.o command.o
 
 LIB3     = libpigpiod_if2.so
 OBJ3     = pigpiod_if2.o command.o
 
-LIB      = $(LIB1) $(LIB2) $(LIB3)
+LIB      = $(LIB1) $(LIB1S) $(LIB2) $(LIB3)
 
 ALL     = $(LIB) x_pigpio x_pigpiod_if x_pigpiod_if2 pig2vcd pigpiod pigs
 
@@ -140,6 +143,9 @@ $(LIB1):	$(OBJ1)
 	ln -fs $(LIB1).$(SOVERSION) $(LIB1)
 	$(STRIPLIB) $(LIB1)
 	$(SIZE)     $(LIB1)
+
+$(LIB1S):   $(OBJ1)
+	$(AR) $(ARFLAG) $(LIB1S) $(OBJ1)
 
 $(LIB2):	$(OBJ2)
 	$(SHLIB) -pthread -Wl,-soname,$(LIB2).$(SOVERSION) -o $(LIB2).$(SOVERSION) $(OBJ2)
