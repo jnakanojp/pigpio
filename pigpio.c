@@ -319,7 +319,7 @@ bit 0 READ_LAST_NOT_SET_ERROR
 // #define SPI_BASE   (pi_peri_phys + 0x00204600)
 #define SYST_BASE  (pi_peri_phys + 0x00003000)
 
-#define SPI_OFFSET 0x800 / 4
+#define SPI_OFFSET 0xa00 / 4
 // #define SPI_OFFSET 0x000
 
 #define AUX_LEN   0xD8
@@ -586,11 +586,11 @@ bit 0 READ_LAST_NOT_SET_ERROR
 
 /* standard SPI gpios (ALT3) */
 
-#define PI_SPI_CE0   4
+#define PI_SPI_CE0   12
 // #define PI_SPI_CE1   7
-#define PI_SPI_SCLK  7
-#define PI_SPI_MISO  5
-#define PI_SPI_MOSI  6
+#define PI_SPI_SCLK  15
+#define PI_SPI_MISO  13
+#define PI_SPI_MOSI  14
 
 /* auxiliary SPI gpios (ALT4) */
 
