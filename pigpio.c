@@ -319,7 +319,8 @@ bit 0 READ_LAST_NOT_SET_ERROR
 // #define SPI_BASE   (pi_peri_phys + 0x00204600)
 #define SYST_BASE  (pi_peri_phys + 0x00003000)
 
-#define SPI_OFFSET 0x600
+#define SPI_OFFSET 0x600 / 4
+// #define SPI_OFFSET 0x000
 
 #define AUX_LEN   0xD8
 #define BSCS_LEN  0x40
@@ -895,6 +896,9 @@ Assumes two counters per block.  Each counter 4 * 16 (16^4=65536)
 #define PI_THREAD_RUNNING 2
 
 #define PI_MAX_PATH 512
+
+//#define DEBUG_PRINT(addr, val) printf("%s:%s(%d) %04x = %08x(%d)\n", __FILE__, __func__, __LINE__, (addr) * 4, (val), (val))
+#define DEBUG_PRINT(addr, val)
 
 /* typedef ------------------------------------------------------- */
 
@@ -1649,12 +1653,16 @@ static int my_smbus_access(
 
 static void myGpioSetMode(unsigned gpio, unsigned mode)
 {
+
    int reg, shift;
 
    reg   =  gpio/10;
    shift = (gpio%10) * 3;
+   
+   printf("gpioReg[%02d]=%x (gpio=%d mode=%d) (before)\n", reg, gpioReg[reg], gpio, mode);
 
-   gpioReg[reg] = (gpioReg[reg] & ~(7<<shift)) | (mode<<shift);
+   gpioReg[reg] = (gpioReg[reg] & ~(7 << shift)) | (mode << shift);
+   printf("gpioReg[%02d]=%x (gpio=%d mode=%d)\n", reg, gpioReg[reg], gpio, mode);
 }
 
 
@@ -4529,8 +4537,10 @@ static void spiGoS(
                  SPI_CS_CLEAR(3);
 
    spiReg[SPI_OFFSET + SPI_DLEN] = 2; /* undocumented, stops inter-byte gap */
+   DEBUG_PRINT(SPI_DLEN, 2);
 
    spiReg[SPI_OFFSET + SPI_CS] = spiDefaults; /* stop */
+   DEBUG_PRINT(SPI_CS, spiDefaults);
 
    if (!count) return;
 
@@ -4554,8 +4564,11 @@ static void spiGoS(
    }
 
    spiReg[SPI_OFFSET +SPI_CLK] = 250000000/speed;
+   DEBUG_PRINT(SPI_CLK, 250000000/speed);
+
 
    spiReg[SPI_OFFSET +SPI_CS] = spiDefaults | SPI_CS_TA; /* start */
+   DEBUG_PRINT(SPI_CS, spiDefaults | SPI_CS_TA);
 
    cnt = cnt4w;
 
@@ -4568,7 +4581,10 @@ static void spiGoS(
          rxCnt++;
       }
 
-      while((txCnt < cnt) && ((spiReg[SPI_OFFSET +SPI_CS] & SPI_CS_TXD)))
+      uint8_t regcopy[SPI_LEN];
+      memcpy(regcopy, spiReg + SPI_OFFSET, SPI_LEN);
+      
+      while ((txCnt < cnt) && ((spiReg[SPI_OFFSET + SPI_CS] & SPI_CS_TXD)))
       {
          if (txBuf) spiReg[SPI_OFFSET +SPI_FIFO] = txBuf[txCnt];
          else       spiReg[SPI_OFFSET +SPI_FIFO] = 0;
@@ -4583,6 +4599,8 @@ static void spiGoS(
    cnt += cnt3w;
 
    spiReg[SPI_OFFSET +SPI_CS] |= SPI_CS_REN;
+   DEBUG_PRINT(SPI_CS, SPI_CS_REN);
+   // printf("or\n");
 
    while((txCnt < cnt) || (rxCnt < cnt))
    {
@@ -4604,6 +4622,7 @@ static void spiGoS(
    while (!(spiReg[SPI_OFFSET +SPI_CS] & SPI_CS_DONE)) ;
 
    spiReg[SPI_OFFSET +SPI_CS] = spiDefaults; /* stop */
+   DEBUG_PRINT(SPI_CS, spiDefaults);
 }
 
 static void spiGo(
@@ -7426,7 +7445,11 @@ static int initPeripherals(void)
    if (systReg == MAP_FAILED)
       SOFT_ERROR(PI_INIT_FAILED, "mmap syst failed (%m)");
 
-   spiReg  = initMapMem(fdMem, SPI_BASE,  SPI_OFFSET + SPI_LEN);
+   spiReg  = initMapMem(fdMem, SPI_BASE ,  SPI_OFFSET + SPI_LEN);
+
+   uint8_t spiRegCopy[SPI_OFFSET + SPI_LEN];
+   memcpy(spiRegCopy, spiReg, SPI_OFFSET + SPI_LEN);
+
 
    if (spiReg == MAP_FAILED)
       SOFT_ERROR(PI_INIT_FAILED, "mmap spi failed (%m)");
@@ -8134,7 +8157,7 @@ static void initReleaseResources(void)
    if (pcmReg  != MAP_FAILED) munmap((void *)pcmReg,  PCM_LEN);
    if (pwmReg  != MAP_FAILED) munmap((void *)pwmReg,  PWM_LEN);
    if (systReg != MAP_FAILED) munmap((void *)systReg, SYST_LEN);
-   if (spiReg  != MAP_FAILED) munmap((void *)spiReg,  SPI_LEN);
+   if (spiReg  != MAP_FAILED) munmap((void *)spiReg,  SPI_OFFSET + SPI_LEN);
 
    auxReg  = MAP_FAILED;
    bscsReg = MAP_FAILED;
