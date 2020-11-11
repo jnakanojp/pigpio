@@ -897,7 +897,7 @@ Assumes two counters per block.  Each counter 4 * 16 (16^4=65536)
 
 #define PI_MAX_PATH 512
 
-//#define DEBUG_PRINT(addr, val) printf("%s:%s(%d) %04x = %08x(%d)\n", __FILE__, __func__, __LINE__, (addr) * 4, (val), (val))
+// #define DEBUG_PRINT(addr, val) printf("%s:%s(%d) %04x = %08x(%d)\n", __FILE__, __func__, __LINE__, (addr) * 4, (val), (val))
 #define DEBUG_PRINT(addr, val)
 
 /* typedef ------------------------------------------------------- */
@@ -1659,10 +1659,10 @@ static void myGpioSetMode(unsigned gpio, unsigned mode)
    reg   =  gpio/10;
    shift = (gpio%10) * 3;
    
-   printf("gpioReg[%02d]=%x (gpio=%d mode=%d) (before)\n", reg, gpioReg[reg], gpio, mode);
+   // printf("gpioReg[%02d]=%x (gpio=%d mode=%d) (before)\n", reg, gpioReg[reg], gpio, mode);
 
    gpioReg[reg] = (gpioReg[reg] & ~(7 << shift)) | (mode << shift);
-   printf("gpioReg[%02d]=%x (gpio=%d mode=%d)\n", reg, gpioReg[reg], gpio, mode);
+   // printf("gpioReg[%02d]=%x (gpio=%d mode=%d)\n", reg, gpioReg[reg], gpio, mode);
 }
 
 
@@ -4581,8 +4581,8 @@ static void spiGoS(
          rxCnt++;
       }
 
-      uint8_t regcopy[SPI_LEN];
-      memcpy(regcopy, spiReg + SPI_OFFSET, SPI_LEN);
+      // uint8_t regcopy[SPI_LEN];
+      // memcpy(regcopy, spiReg + SPI_OFFSET, SPI_LEN);
       
       while ((txCnt < cnt) && ((spiReg[SPI_OFFSET + SPI_CS] & SPI_CS_TXD)))
       {
@@ -7446,6 +7446,8 @@ static int initPeripherals(void)
       SOFT_ERROR(PI_INIT_FAILED, "mmap syst failed (%m)");
 
    spiReg  = initMapMem(fdMem, SPI_BASE ,  SPI_OFFSET + SPI_LEN);
+
+   printf("spiRegSize = %x\n", SPI_OFFSET + SPI_LEN);
 
    uint8_t spiRegCopy[SPI_OFFSET + SPI_LEN];
    memcpy(spiRegCopy, spiReg, SPI_OFFSET + SPI_LEN);

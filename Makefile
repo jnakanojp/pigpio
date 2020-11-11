@@ -13,7 +13,7 @@ STRIPLIB     = $(STRIP) --strip-unneeded
 
 SOVERSION    = 1
 
-CFLAGS	+= -O3 -Wall -pthread
+CFLAGS	+= -O3 -Wall -pthread -I./
 
 LIB1     = libpigpio.so
 OBJ1     = pigpio.o command.o
